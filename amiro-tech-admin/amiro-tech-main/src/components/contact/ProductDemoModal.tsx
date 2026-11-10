@@ -6,12 +6,12 @@ type ProductDemoModalProps = {
 }
 
 const industries = ['Manufacturing', 'Engineering', 'NDT / Inspection', 'Healthcare', 'Technology', 'Other']
-const demoTimes = ['Morning (9 AM–12 PM)', 'Afternoon (12 PM–4 PM)', 'Evening (4 PM–6 PM)']
+const imsDemoUrl = import.meta.env.VITE_IMS_DEMO_URL || 'http://localhost:8000/?demo=1'
 
 export function ProductDemoModal({ onClose }: ProductDemoModalProps) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
-  const [delivery, setDelivery] = useState<'idle' | 'sending' | 'sent' | 'email' | 'error'>('idle')
+  const [delivery, setDelivery] = useState<'idle' | 'sending' | 'error'>('idle')
   const directSubmission = import.meta.env.VITE_CONTACT_DIRECT === 'true'
 
   useEffect(() => {
@@ -52,23 +52,49 @@ export function ProductDemoModal({ onClose }: ProductDemoModalProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (delivery === 'sending' || delivery === 'sent') return
+    if (delivery === 'sending') return
 
     const formData = new FormData(event.currentTarget)
+    const name = String(formData.get('name') ?? '').trim()
+    const email = String(formData.get('email') ?? '').trim()
+    const company = String(formData.get('company') ?? '').trim()
+    const address = String(formData.get('address') ?? '').trim()
+    const phone = String(formData.get('phone') ?? '').trim()
+    const industry = String(formData.get('industry') ?? '').trim()
+    const requirements = String(formData.get('requirements') ?? '').trim()
+
+    const openDemoPortal = () => {
+      const destination = new URL(imsDemoUrl, window.location.href)
+      destination.searchParams.set('demo', '1')
+      if (name) destination.searchParams.set('name', name)
+      if (email) destination.searchParams.set('email', email)
+      if (company) destination.searchParams.set('company', company)
+      if (address) destination.searchParams.set('address', address)
+      if (phone) destination.searchParams.set('phone', phone)
+      if (industry) destination.searchParams.set('industry', industry)
+      if (requirements) destination.searchParams.set('requirements', requirements)
+
+      try {
+        localStorage.setItem('amiro_demo_client_details', JSON.stringify({
+          name, email, company, address, phone, industry, requirements
+        }))
+      } catch (_) {}
+
+      window.location.assign(destination.toString())
+    }
+
     const details = [
-      `Company address: ${String(formData.get('address') ?? '')}`,
-      `Industry: ${String(formData.get('industry') ?? '') || 'Not specified'}`,
-      `Preferred demo date: ${String(formData.get('preferredDate') ?? '') || 'Flexible'}`,
-      `Preferred time: ${String(formData.get('preferredTime') ?? '') || 'Flexible'}`,
+      `Location address: ${address || 'Not provided'}`,
+      `Industry: ${industry || 'Not specified'}`,
       '',
       'Project requirements:',
-      String(formData.get('requirements') ?? '') || 'Not provided',
+      requirements || 'Not provided',
     ].join('\n')
     const inquiry = {
-      name: String(formData.get('name') ?? ''),
-      email: String(formData.get('email') ?? ''),
-      company: String(formData.get('company') ?? ''),
-      phone: String(formData.get('phone') ?? ''),
+      name,
+      email,
+      company,
+      phone,
       requirementType: 'Product Demo',
       productInterest: 'IMS for NDT Labs',
       message: details,
@@ -86,7 +112,7 @@ export function ProductDemoModal({ onClose }: ProductDemoModalProps) {
         })
         const result = await response.json()
         if (!response.ok || result.accepted !== true) throw new Error('Demo request was not accepted')
-        setDelivery('sent')
+        openDemoPortal()
       } catch {
         setDelivery('error')
         dialogRef.current?.querySelector<HTMLElement>('[role="alert"]')?.focus()
@@ -94,17 +120,7 @@ export function ProductDemoModal({ onClose }: ProductDemoModalProps) {
       return
     }
 
-    const body = [
-      `Name: ${inquiry.name}`,
-      `Company: ${inquiry.company}`,
-      `Email: ${inquiry.email}`,
-      `Contact number: ${inquiry.phone}`,
-      `Product: ${inquiry.productInterest}`,
-      '',
-      inquiry.message,
-    ].join('\n')
-    window.location.href = `mailto:info@amirotechsolutions.com?subject=${encodeURIComponent('IMS product demo request')}&body=${encodeURIComponent(body)}`
-    setDelivery('email')
+    openDemoPortal()
   }
 
   return (
@@ -147,76 +163,58 @@ export function ProductDemoModal({ onClose }: ProductDemoModalProps) {
             <Icon name="users" />
             <div>
               <h3>Client <em>Details</em></h3>
-              <p>Please provide your information to schedule an IMS demo.</p>
+              <p>Please provide your information to access the IMS demo.</p>
             </div>
           </header>
-          {delivery === 'sent' ? (
-            <p className="ims-demo-status" role="status">Thanks — your IMS demo request has been submitted. Our team will follow up with you.</p>
-          ) : (
-            <form className="ims-demo-form" onSubmit={handleSubmit}>
-              <div aria-hidden="true" className="ims-demo-honeypot">
-                <label>Leave empty<input autoComplete="off" name="website" tabIndex={-1} /></label>
-              </div>
-              <label className="ims-demo-field">
-                <Icon name="users" />
-                <span className="sr-only">Client name *</span>
-                <input autoComplete="name" name="name" placeholder="Client Name *" required />
-              </label>
-              <label className="ims-demo-field">
-                <Icon name="mail" />
-                <span className="sr-only">Client email *</span>
-                <input autoComplete="email" name="email" placeholder="Client Email *" required type="email" />
-              </label>
-              <label className="ims-demo-field">
-                <Icon name="briefcase" />
-                <span className="sr-only">Company name *</span>
-                <input autoComplete="organization" name="company" placeholder="Company Name *" required />
-              </label>
-              <label className="ims-demo-field">
-                <Icon name="pin" />
-                <span className="sr-only">Company address *</span>
-                <input autoComplete="street-address" name="address" placeholder="Company Address *" required />
-              </label>
-              <label className="ims-demo-field">
-                <Icon name="phone" />
-                <span className="sr-only">Contact number *</span>
-                <input autoComplete="tel" name="phone" placeholder="Contact Number *" required type="tel" />
-              </label>
-              <label className="ims-demo-field">
-                <Icon name="briefcase" />
-                <span className="sr-only">Industry</span>
-                <select aria-label="Industry" defaultValue="" name="industry">
-                  <option disabled value="">Industry</option>
-                  {industries.map((industry) => <option key={industry}>{industry}</option>)}
-                </select>
-              </label>
-              <label className="ims-demo-field ims-demo-field--textarea">
-                <Icon name="doc" />
-                <span className="sr-only">Project requirements (optional)</span>
-                <textarea name="requirements" placeholder="Project Requirements (Optional)&#10;Tell us about your IMS requirements..." rows={3} />
-              </label>
-              <label className="ims-demo-field">
-                <Icon name="clock" />
-                <span className="sr-only">Preferred demo date</span>
-                <input aria-label="Preferred demo date" name="preferredDate" type="date" />
-              </label>
-              <label className="ims-demo-field">
-                <Icon name="clock" />
-                <span className="sr-only">Preferred time</span>
-                <select aria-label="Preferred time" defaultValue="" name="preferredTime">
-                  <option disabled value="">Preferred Time</option>
-                  {demoTimes.map((time) => <option key={time}>{time}</option>)}
-                </select>
-              </label>
-              {delivery === 'error' && (
+          <form className="ims-demo-form" onSubmit={handleSubmit}>
+            <div aria-hidden="true" className="ims-demo-honeypot">
+              <label>Leave empty<input autoComplete="off" name="website" tabIndex={-1} /></label>
+            </div>
+            <label className="ims-demo-field">
+              <Icon name="users" />
+              <span className="sr-only">Client name *</span>
+              <input autoComplete="name" name="name" placeholder="Client Name *" required />
+            </label>
+            <label className="ims-demo-field">
+              <Icon name="mail" />
+              <span className="sr-only">Client email *</span>
+              <input autoComplete="email" name="email" placeholder="Client Email *" required type="email" />
+            </label>
+            <label className="ims-demo-field">
+              <Icon name="briefcase" />
+              <span className="sr-only">Company name *</span>
+              <input autoComplete="organization" name="company" placeholder="Company Name *" required />
+            </label>
+            <label className="ims-demo-field">
+              <Icon name="pin" />
+              <span className="sr-only">Location address (optional)</span>
+              <input autoComplete="street-address" name="address" placeholder="Location Address (Optional)" />
+            </label>
+            <label className="ims-demo-field">
+              <Icon name="phone" />
+              <span className="sr-only">Contact number *</span>
+              <input autoComplete="tel" name="phone" placeholder="Contact Number *" required type="tel" />
+            </label>
+            <label className="ims-demo-field">
+              <Icon name="briefcase" />
+              <span className="sr-only">Industry *</span>
+              <select aria-label="Industry" defaultValue="" name="industry" required>
+                <option disabled value="">Industry</option>
+                {industries.map((industry) => <option key={industry}>{industry}</option>)}
+              </select>
+            </label>
+            <label className="ims-demo-field ims-demo-field--textarea">
+              <Icon name="doc" />
+              <span className="sr-only">Project requirements (optional)</span>
+              <textarea name="requirements" placeholder="Project Requirements (Optional)&#10;Tell us about your IMS requirements..." rows={3} />
+            </label>
+            {delivery === 'error' && (
               <p className="ims-demo-error" role="alert" tabIndex={-1}>We couldn’t submit the request. Please try again or email us at info@amirotechsolutions.com.</p>
-              )}
-              {delivery === 'email' && <p className="ims-demo-status" role="status">A pre-filled email draft should open. Send it from your email app to complete your request.</p>}
-              <button className="ims-demo-submit" disabled={delivery === 'sending'} type="submit">
-                {delivery === 'sending' ? 'Scheduling…' : 'Schedule My IMS Demo'} <Icon name="arrow" />
-              </button>
-            </form>
-          )}
+            )}
+            <button className="ims-demo-submit" disabled={delivery === 'sending'} type="submit">
+              {delivery === 'sending' ? 'Sending…' : 'Open IMS Demo'} <Icon name="arrow" />
+            </button>
+          </form>
         </section>
       </div>
     </div>

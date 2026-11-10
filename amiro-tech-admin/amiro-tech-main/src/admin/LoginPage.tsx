@@ -46,7 +46,6 @@ export function LoginPage({ onLoggedIn }: { onLoggedIn: (admin: AdminUser) => vo
           {error && <p className="adm-alert" role="alert">{error}</p>}
           <button className="adm-btn adm-btn--primary adm-btn--block" disabled={busy || unconfigured} type="submit">{busy ? 'Signing in…' : 'Sign in'}</button>
         </form>
-        {import.meta.env.DEV && <p className="adm-hint">Development only — default login: <code>admin@amirotech.local</code> / <code>Admin@12345</code>. Set <code>ADMIN_EMAIL</code> and <code>ADMIN_PASSWORD</code> in <code>.env.local</code> to change it.</p>}
         <a className="adm-back" href="/">← Back to website</a>
       </div>
       <aside className="adm-login__aside" aria-hidden="true">

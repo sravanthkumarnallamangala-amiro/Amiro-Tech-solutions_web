@@ -100,7 +100,6 @@ export function Footer() {
             <a href="/privacy-policy">Privacy Policy</a>
             <a href="/terms-and-conditions">Terms &amp; Conditions</a>
             <a href="/cookie-policy">Cookies &amp; External Services</a>
-            <a href="/admin/login" rel="nofollow">Admin Login</a>
           </nav>
         </div>
       </Container>
